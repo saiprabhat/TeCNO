@@ -39,12 +39,13 @@ def train(hparams, ModuleClass, ModelClass, DatasetClass, logger):
     # 3 INIT TRAINER --> continues training
     # ------------------------
     checkpoint_callback = ModelCheckpoint(
-        filepath=f"{hparams.output_path}/checkpoints/",
+        dirpath=f"{hparams.output_path}/checkpoints/",
         save_top_k=hparams.save_top_k,
         verbose=True,
         monitor=hparams.early_stopping_metric,
         mode='max',
-        prefix=hparams.name
+        prefix=hparams.name,
+        filename=f'{{epoch}}-{{{hparams.early_stopping_metric}:.2f}}'
     )
 
     trainer = Trainer(
