@@ -10,7 +10,7 @@ def build_configargparser(parser):
     # gpu args
     trainer_group.add_argument("--gpus",
                                type=int,
-                               default=1,
+                               default=0,
                                help="how many gpus / -1 means all")
     trainer_group.add_argument(
         "--distributed_backend",

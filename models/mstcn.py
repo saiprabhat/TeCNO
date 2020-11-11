@@ -93,6 +93,9 @@ class SingleStageModel(nn.Module):
 
 
 class DilatedResidualLayer(nn.Module):
+    """This is an implementation of the Dilated Residual Layer as described in the paper.
+
+    """
     def __init__(self,
                  dilation,
                  in_channels,
@@ -100,10 +103,14 @@ class DilatedResidualLayer(nn.Module):
                  causal_conv=False,
                  kernel_size=3):
         super(DilatedResidualLayer, self).__init__()
+        # Flag for temporal causality
         self.causal_conv = causal_conv
         self.dilation = dilation
         self.kernel_size = kernel_size
+        # Checking for temporal causality flag
         if self.causal_conv:
+            ## DOES padding account for temporal causality as well? 
+            # 1D causal convolutions
             self.conv_dilated = nn.Conv1d(in_channels,
                                           out_channels,
                                           kernel_size,
@@ -120,11 +127,16 @@ class DilatedResidualLayer(nn.Module):
         self.dropout = nn.Dropout()
 
     def forward(self, x):
+        # `out` : result of dilated convolution with the output of previous layer
         out = F.relu(self.conv_dilated(x))
+        # Slicing for making the prediction depend on only the current and previous frames
         if self.causal_conv:
             out = out[:, :, :-(self.dilation * 2)]
+        # Performing 1x1 Convolution
         out = self.conv_1x1(out)
+        # Dropout for regularization and improving generalization
         out = self.dropout(out)
+        # Return output of previous layer (`x`) + output of current layer (`out`) 
         return (x + out)
 
 

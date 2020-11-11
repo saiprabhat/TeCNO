@@ -10,14 +10,28 @@ from datetime import datetime
 
 class TwoHeadResNet50Model(nn.Module):
     def __init__(self, hparams):
+        """Constructor of the class. 
+
+        Args:
+            hparams (namespace): Dictionary containing several key-value pairs.
+                                The keys `pretrained` and `out_features` are used here.
+        """
         super(TwoHeadResNet50Model, self).__init__()
         self.model = models.resnet50(pretrained=hparams.pretrained)
-        # replace final layer with number of labels
+        # Replace final layer of ResNet50 with number of labels
         self.model.fc = Identity()
         self.fc_phase = nn.Linear(2048, hparams.out_features)
         self.fc_tool = nn.Linear(2048, hparams.out_features)
 
     def forward(self, x):
+        """Performs a forward pass through a TwoHeadResNet50 model and computes the predictions for each frame of a video.
+
+        Args:
+            x ([FloatTensor]): 
+
+        Returns:
+            [type]: [description]
+        """
         now = datetime.now()
         out_stem = self.model(x)
         phase = self.fc_phase(out_stem)

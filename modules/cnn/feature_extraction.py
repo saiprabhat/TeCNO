@@ -22,8 +22,12 @@ class FeatureExtraction(LightningModule):
         self.dataset = dataset
         self.num_tasks = self.hparams.num_tasks  # output stem 0, output phase 1 , output phase and tool 2
         self.log_vars = nn.Parameter(torch.zeros(2))
+        # Binary Cross-entropy (BCE) loss for multi-label problem
         self.bce_loss = nn.BCEWithLogitsLoss()
+        # Cross-entropy loss for multi-class classification problem
+        # accounting for class imbalance by `class weights` computed using median frequency balancing
         self.ce_loss = nn.CrossEntropyLoss(weight=torch.from_numpy(self.dataset.class_weights).float())
+        # Sigmoid activation for the BCE problem 
         self.sig_f = nn.Sigmoid()
         self.current_video_idx = self.dataset.df["test"].video_idx.min()
         self.init_metrics()

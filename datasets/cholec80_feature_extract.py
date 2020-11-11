@@ -116,7 +116,7 @@ class Cholec80FeatureExtract:
                         "tool_Scissors", "tool_Clipper", "tool_Irrigator",
                         "tool_SpecimenBag"
                     ])
-            # here we want to extract all features
+            # Here we want to extract all features
             #self.df["test"] = self.df["all"].reset_index()
             self.df["test"] = self.df["test"].reset_index()
             self.data["test"] = Dataset_from_Dataframe(
