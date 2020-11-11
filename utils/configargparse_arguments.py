@@ -10,18 +10,27 @@ def build_configargparser(parser):
     # gpu args
     trainer_group.add_argument("--gpus",
                                type=int,
+<<<<<<< HEAD
+=======
+                               nargs='+',
+>>>>>>> tecno_upstream/master
                                default=0,
                                help="how many gpus / -1 means all")
     trainer_group.add_argument(
-        "--distributed_backend",
+        "--accelerator",
         type=str,
         default="ddp",
-        help="supports three options dp, ddp, ddp2",
+        help="supports four options dp, ddp, ddp_spawn, ddp2",
     )
 
     trainer_group.add_argument("--resume_from_checkpoint",
                                type=str,
                                default=None)
+
+    trainer_group.add_argument("--log_every_n_steps",
+                               type=int,
+                               default=50)
+
     # config module e.g. classification_multiclass
     module_group.add_argument("--module", type=str, required=True)
 
