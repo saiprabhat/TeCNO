@@ -86,8 +86,11 @@ if __name__ == "__main__":
     # these are project-wide arguments
 
     root_dir = Path(__file__).parent
+    #parser = configargparse.ArgParser(
+        #config_file_parser_class=configargparse.YAMLConfigFileParser, default_config_files = ["modules/cnn/config/config_feature_extract.yml"])
+
     parser = configargparse.ArgParser(
-        config_file_parser_class=configargparse.YAMLConfigFileParser, default_config_files = ["modules/cnn/config/config_feature_extract.yml"])
+        config_file_parser_class=configargparse.YAMLConfigFileParser, default_config_files = ["modules/mstcn/config/config_tcn.yml"])
     parser.add('-c', is_config_file=True, help='config file path')
     parser, hparams = build_configargparser(parser)
 

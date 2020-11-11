@@ -6,6 +6,9 @@ import pandas as pd
 
 
 class Cholec80Helper(Dataset):
+    """
+    Cholec80 data generator
+    """
     def __init__(self, hparams, data_p, dataset_split=None):
         assert dataset_split != None
         self.data_p = data_p
@@ -63,6 +66,8 @@ class Cholec80():
 
         # Datasplit is equal to Endonet and Multi-Task Recurrent ConvNet with correlation loss for surgical vid analysis
         self.weights = {}
+
+        ## TO ACCOUNT FOR IMBALANCE IN PHASES RIGHT?
         self.weights["train"] = [
             1.6411019141231247,
             0.19090963801041133,
@@ -72,6 +77,7 @@ class Cholec80():
             0.9840248158200853,
             2.174635818337618,
         ]
+        ## WHY THESE? answer: just playing around
         self.weights["train_log"] = [1.25, 0.5, 1.0, 0.25, 1.25, 1., 1.5]
 
         self.data = {}

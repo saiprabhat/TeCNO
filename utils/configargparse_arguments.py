@@ -2,6 +2,8 @@ import configargparse
 
 
 def build_configargparser(parser):
+    """Function to parse the arguments from the `config` files.
+    """
     model_group = parser.add_argument_group(title='Model options')
     dataset_group = parser.add_argument_group(title='Dataset options')
     module_group = parser.add_argument_group(title='Module options')
@@ -10,10 +12,7 @@ def build_configargparser(parser):
     # gpu args
     trainer_group.add_argument("--gpus",
                                type=int,
-<<<<<<< HEAD
-=======
                                nargs='+',
->>>>>>> tecno_upstream/master
                                default=0,
                                help="how many gpus / -1 means all")
     trainer_group.add_argument(

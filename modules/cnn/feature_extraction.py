@@ -25,6 +25,7 @@ class FeatureExtraction(LightningModule):
         self.ce_loss = nn.CrossEntropyLoss(weight=torch.from_numpy(self.dataset.class_weights).float())
         # Sigmoid activation for the BCE problem 
         self.sig_f = nn.Sigmoid()
+        # Choosing the initial frame of the given video
         self.current_video_idx = self.dataset.df["test"].video_idx.min()
         self.init_metrics()
 
@@ -39,6 +40,9 @@ class FeatureExtraction(LightningModule):
         self.pickle_path = None
 
     def init_metrics(self):
+        """
+        Computes performance metrics for phase recognition alone or both - phase and tool recognition. 
+        """
         self.train_acc_phase = pl.metrics.Accuracy()
         self.val_acc_phase = pl.metrics.Accuracy()
         self.test_acc_phase = pl.metrics.Accuracy()
@@ -58,10 +62,17 @@ class FeatureExtraction(LightningModule):
     # ---------------------
 
     def forward(self,x):
+        """
+        Performs a forward pass through the neural network model and computes predictions.
+        """
         stem, phase, tool = self.model.forward(x)
         return stem, phase, tool
 
     def loss_phase_tool(self, p_phase, p_tool, labels_phase, labels_tool, num_tasks):
+        """
+        Computes loss for phase recognition alone or both - phase and tool recognition. 
+        """
+        # Multi-class loss of phase recognition
         loss_phase = self.ce_loss(p_phase, labels_phase)
         if num_tasks == 1:
             return loss_phase
@@ -79,6 +90,9 @@ class FeatureExtraction(LightningModule):
 
 
     def training_step(self, batch, batch_idx):
+        """
+        Performs one `training` step.
+        """
         x, y_phase, y_tool = batch
         _, p_phase, p_tool = self.forward(x)
         loss = self.loss_phase_tool(p_phase, p_tool, y_phase, y_tool, self.num_tasks)
@@ -96,6 +110,9 @@ class FeatureExtraction(LightningModule):
 
 
     def validation_step(self, batch, batch_idx):
+        """
+        Performs one `validation` step.
+        """
         x, y_phase, y_tool = batch
         _, p_phase, p_tool = self.forward(x)
         loss = self.loss_phase_tool(p_phase, p_tool, y_phase, y_tool, self.num_tasks)
@@ -120,6 +137,10 @@ class FeatureExtraction(LightningModule):
         return cm.Overall_ACC, cm.PPV, cm.TPR, cm.classes, cm.F1_Macro
 
     def save_to_drive(self, vid_index):
+        """
+        Saves the features(`stem`), predicted phase(`phase`) and 
+        the ground truth phase labels(`phase_labels`) for each frame of a video.
+        """
         acc, ppv, tpr, keys, f1 = self.get_phase_acc(self.current_phase_labels,
                                                      self.current_p_phases)
         save_path = self.pickle_path / f"{self.hparams.fps_sampling_test}fps"
@@ -143,7 +164,10 @@ class FeatureExtraction(LightningModule):
             ], f)
 
     def test_step(self, batch, batch_idx):
-
+        """
+        Performs one `test` step and saves the features, predicted phase labels and 
+        ground truth labels for each frame of a video.
+        """
         x, y_phase, (vid_idx, img_name, img_index, tool_Grasper, tool_Bipolar,
                tool_Hook, tool_Scissors, tool_Clipper, tool_Irrigator,
                tool_SpecimenBag) = batch
@@ -184,6 +208,9 @@ class FeatureExtraction(LightningModule):
 
 
     def test_epoch_end(self, outputs):
+        """
+        Log the various performance metrics.
+        """
         self.log("test_acc_train", np.mean(np.asarray([self.test_acc_per_video[x]for x in
                                                        self.dataset.vids_for_training])))
         self.log("test_acc_val", np.mean(np.asarray([self.test_acc_per_video[x]for x in
@@ -256,6 +283,10 @@ class FeatureExtraction(LightningModule):
 
 
     def test_dataloader(self):
+        """
+        Initialize test loader
+        :return: test loader
+        """
         dataloader = self.__dataloader(split="test")
         logging.info("test data loader called  - size: {}".format(
             len(dataloader.dataset)))

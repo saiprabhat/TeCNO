@@ -24,13 +24,11 @@ class TwoHeadResNet50Model(nn.Module):
         self.fc_tool = nn.Linear(2048, hparams.out_features)
 
     def forward(self, x):
-        """Performs a forward pass through a TwoHeadResNet50 model and computes the predictions for each frame of a video.
-
-        Args:
-            x ([FloatTensor]): 
-
-        Returns:
-            [type]: [description]
+        """
+        Performs a forward pass through a TwoHeadResNet50 model and computes the predictions for each frame of a video.
+        :return out_stem: feature vectors for each frame
+        :return phase: predicted phase vector for each frame
+        :return tool: predicted tool vector for each frame
         """
         now = datetime.now()
         out_stem = self.model(x)

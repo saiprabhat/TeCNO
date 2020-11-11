@@ -143,6 +143,9 @@ class Cholec80FeatureExtract:
                 )
 
     def __get_transformations(self):
+        """
+        Performs transformations on the `train`, `val` and `test` datasets.
+        """
         norm_mean = [0.3456, 0.2281, 0.2233]
         norm_std = [0.2528, 0.2135, 0.2104]
         normalize = Normalize(mean=norm_mean, std=norm_std)

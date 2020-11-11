@@ -93,8 +93,8 @@ class SingleStageModel(nn.Module):
 
 
 class DilatedResidualLayer(nn.Module):
-    """This is an implementation of the Dilated Residual Layer as described in the paper.
-
+    """
+    Implementation of the Dilated Residual Layer as described in the paper.
     """
     def __init__(self,
                  dilation,
@@ -109,7 +109,7 @@ class DilatedResidualLayer(nn.Module):
         self.kernel_size = kernel_size
         # Checking for temporal causality flag
         if self.causal_conv:
-            ## DOES padding account for temporal causality as well? 
+            ## HOW DOES PADDING ACCOUNT FOR TEMPORAL CAUSALITY? 
             # 1D causal convolutions
             self.conv_dilated = nn.Conv1d(in_channels,
                                           out_channels,

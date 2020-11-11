@@ -13,11 +13,11 @@ min_epochs : 12
 max_epochs : 16
 mstcn_layers : 8
 mstcn_f_maps : 45
-mstcn_f_dim: 1024
+mstcn_f_dim: 2048 # depends on ResNet18 or ResNet50
 mstcn_stages : 2
 early_stopping_metric : val_acc
 save_top_k : 1
-gpus : ['1']
+gpus : ['1'] # specifically use GPU 1
 data_root : /home/tobiascz/Datasets/cholec80_pickle_export/cholec80_pickle_export
 num_sanity_val_steps: 0
 
