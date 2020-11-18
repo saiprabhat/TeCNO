@@ -11,7 +11,14 @@ import pickle
 
 
 class FeatureExtraction(LightningModule):
+    """A PyTorch Lightning module which encapsulates the Feature Extraction backbone of a pre-trained ResNet50 without temporal context. Other models such as ResNet18 can be implemented in `models/cnn.py`.
+
+    :param LightningModule: Lightning Module
+    :type LightningModule: PyTorch Lightning Module
+    """
     def __init__(self, hparams, model, dataset):
+        """Constructor method.
+        """
         super(FeatureExtraction, self).__init__()
         self.hparams = hparams
         self.batch_size = hparams.batch_size
@@ -40,8 +47,7 @@ class FeatureExtraction(LightningModule):
         self.pickle_path = None
 
     def init_metrics(self):
-        """
-        Computes performance metrics for phase recognition alone or both - phase and tool recognition. 
+        """Computes performance metrics - `training accuracy`, `validation accuracy` and `test accuracy` for phase recognition alone or both - phase and tool recognition. It uses the built-in PyTorch Lightning `class Accuracy`.
         """
         self.train_acc_phase = pl.metrics.Accuracy()
         self.val_acc_phase = pl.metrics.Accuracy()
@@ -53,6 +59,8 @@ class FeatureExtraction(LightningModule):
             self.train_f1_tool = pl.metrics.Fbeta(num_classes=7, multilabel=True)
 
     def set_export_pickle_path(self):
+        """Method to set export path for files.
+        """
         self.pickle_path = self.hparams.output_path / "cholec80_pickle_export"
         self.pickle_path.mkdir(exist_ok=True)
         print(f"setting export_pickle_path: {self.pickle_path}")
@@ -62,15 +70,29 @@ class FeatureExtraction(LightningModule):
     # ---------------------
 
     def forward(self,x):
-        """
-        Performs a forward pass through the neural network model and computes predictions.
+        """Performs a forward pass through the neural network model and computes predictions.
+
+        :param x: Frame of a video
+        :type x: `torch tensor`
+        :return stem, phase, tool: three tensors - `stem` (extracted features of the frame), `label` (logits representing predicted phase of the frame) and `tool` (vector representing predicted tools in the frame) 
         """
         stem, phase, tool = self.model.forward(x)
         return stem, phase, tool
 
     def loss_phase_tool(self, p_phase, p_tool, labels_phase, labels_tool, num_tasks):
-        """
-        Computes loss for phase recognition alone or both - phase and tool recognition. 
+        """Computes loss for phase recognition alone or both - phase and tool recognition. 
+
+        :param p_phase: predicted phase of a given frame
+        :type p_phase: `torch tensor`
+        :param p_tool: predicted possible tools in a given frame
+        :type p_tool: `torch tensor`
+        :param labels_phase: actual phase of a given frame
+        :type labels_phase: `torch tensor`
+        :param labels_tool: actual tools present in a given frame
+        :type labels_tool: `torch tensor`
+        :param num_tasks: if `num_tasks=1` - only phase loss. if `num_tasks=2` - both phase and tool loss
+        :type num_tasks: `int`
+        :return loss: total loss using the cross-entropy loss for multi-class phase  classification problem and binary bross-entropy loss for multi-label tool problem
         """
         # Multi-class loss of phase recognition
         loss_phase = self.ce_loss(p_phase, labels_phase)
@@ -90,8 +112,9 @@ class FeatureExtraction(LightningModule):
 
 
     def training_step(self, batch, batch_idx):
-        """
-        Performs one `training` step.
+        """Takes batch of frames of a given video as input and performs one `training` step. It computes training loss by calling the method `loss_phase_tool` and logs the loss. It also logs training accuracy of tool and phase prediction.
+
+        :return loss: computed loss using the cross-entropy loss for multi-class phase  classification problem and binary bross-entropy loss for multi-label tool problem
         """
         x, y_phase, y_tool = batch
         _, p_phase, p_tool = self.forward(x)
@@ -110,8 +133,9 @@ class FeatureExtraction(LightningModule):
 
 
     def validation_step(self, batch, batch_idx):
-        """
-        Performs one `validation` step.
+        """Takes batch of frames of a given video as input and performs one `validation` step. It logs the validation by calling the method `loss_phase_tool`. It also logs validation accuracy of tool and phase prediction. 
+
+        :return loss: computed loss using the cross-entropy loss for multi-class phase  classification problem and binary bross-entropy loss for multi-label tool problem
         """
         x, y_phase, y_tool = batch
         _, p_phase, p_tool = self.forward(x)
@@ -127,6 +151,12 @@ class FeatureExtraction(LightningModule):
         self.log("val_loss", loss, prog_bar=True, logger=True, on_epoch=True, on_step=False)
 
     def get_phase_acc(self, true_label, pred):
+        """Method to compute the accuracy of phase classification using built-in `class ConfusionMatrix` of PyTorch Lightning. 
+
+        :param true_label: true phase labels of frames
+        :param pred: predicted phase labels of frames
+        :return: various metrics such as overall accuracy, false positives/negatives, number of classes etc.
+        """
         pred = torch.FloatTensor(pred)
         pred_phase = torch.softmax(pred, dim=1)
         labels_pred = torch.argmax(pred_phase, dim=1).cpu().numpy()
@@ -137,9 +167,10 @@ class FeatureExtraction(LightningModule):
         return cm.Overall_ACC, cm.PPV, cm.TPR, cm.classes, cm.F1_Macro
 
     def save_to_drive(self, vid_index):
-        """
-        Saves the features(`stem`), predicted phase(`phase`) and 
+        """Saves the features(`stem`), predicted phase(`phase`) and 
         the ground truth phase labels(`phase_labels`) for each frame of a video.
+
+        :param vid_index: index of the video corresponding to a given frame.
         """
         acc, ppv, tpr, keys, f1 = self.get_phase_acc(self.current_phase_labels,
                                                      self.current_p_phases)
@@ -164,9 +195,7 @@ class FeatureExtraction(LightningModule):
             ], f)
 
     def test_step(self, batch, batch_idx):
-        """
-        Performs one `test` step and saves the features, predicted phase labels and 
-        ground truth labels for each frame of a video.
+        """Performs `test` step and saves the features, predicted phase labels and ground truth labels for each frame of a video. This method must be called explicitly after completion of model training.
         """
         x, y_phase, (vid_idx, img_name, img_index, tool_Grasper, tool_Bipolar,
                tool_Hook, tool_Scissors, tool_Clipper, tool_Irrigator,
@@ -208,8 +237,7 @@ class FeatureExtraction(LightningModule):
 
 
     def test_epoch_end(self, outputs):
-        """
-        Log the various performance metrics.
+        """Method to log the various performance metrics on the test dataset and is called automatically after each epoch on the test dataset.
         """
         self.log("test_acc_train", np.mean(np.asarray([self.test_acc_per_video[x]for x in
                                                        self.dataset.vids_for_training])))
@@ -222,9 +250,8 @@ class FeatureExtraction(LightningModule):
     # TRAINING SETUP
     # ---------------------
     def configure_optimizers(self):
-        """
-        return whatever optimizers we want here
-        :return: list of optimizers
+        """Method to specify required optimizers and/or learning rate schedulers.
+        :return: list of optimizers and/or learning rate schedulers
         """
         optimizer = optim.Adam(self.parameters(),
                                lr=self.hparams.learning_rate)
@@ -232,6 +259,12 @@ class FeatureExtraction(LightningModule):
         return [optimizer]  #, [scheduler]
 
     def __dataloader(self, split=None):
+        """Method to enable easier handling of data. It returns a DataLoader for training, validation and testing.
+
+        :param split: whether training, validation or test split; defaults to None
+        :type split: `str`
+        :return: DataLoader which loads mini-batches of videos of the corresponding training, validation or test split
+        """
         dataset = self.dataset.data[split]
         if self.hparams.batch_size > self.hparams.model_specific_batch_size_max:
             print(
@@ -262,8 +295,7 @@ class FeatureExtraction(LightningModule):
         return loader
 
     def train_dataloader(self):
-        """
-        Intialize train dataloader
+        """Intialize train DataLoader.
         :return: train loader
         """
         dataloader = self.__dataloader(split="train")
@@ -272,8 +304,7 @@ class FeatureExtraction(LightningModule):
         return dataloader
 
     def val_dataloader(self):
-        """
-        Initialize val loader
+        """Initialize validation DataLoader.
         :return: validation loader
         """
         dataloader = self.__dataloader(split="val")
@@ -283,8 +314,7 @@ class FeatureExtraction(LightningModule):
 
 
     def test_dataloader(self):
-        """
-        Initialize test loader
+        """Initialize test DataLoader.
         :return: test loader
         """
         dataloader = self.__dataloader(split="test")
