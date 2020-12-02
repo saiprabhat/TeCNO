@@ -1,10 +1,20 @@
-.. TeCNO documentation master file, created by
-   sphinx-quickstart on Wed Nov 18 09:53:47 2020.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 Welcome to TeCNO's documentation!
 =================================
+
+.. automodule:: train.py
+   :members:
+
+.. automodule:: models.cnn.py
+   :members:
+
+.. automodule:: models.mstcn.py
+   :members:
+
+.. automodule:: modules.cnn.feature_extraction.py
+   :members:
+
+.. automodule:: models.mstcn.tecno.py
+   :members:
 
 .. toctree::
    :maxdepth: 2
