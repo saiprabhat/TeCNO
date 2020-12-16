@@ -77,8 +77,6 @@ class Cholec80():
             0.9840248158200853,
             2.174635818337618,
         ]
-        ## WHY THESE? answer: just playing around
-        self.weights["train_log"] = [1.25, 0.5, 1.0, 0.25, 1.25, 1., 1.5]
 
         self.data = {}
         for split in ["train", "val", "test"]:
