@@ -21,7 +21,7 @@ class Cholec80FeatureExtract:
         self.input_width = hparams.input_width
         self.fps_sampling = hparams.fps_sampling
         self.fps_sampling_test = hparams.fps_sampling_test
-        self.cholec_root_dir = Path(self.hparams.data_root +
+        self.miti_root_dir = Path(self.hparams.data_root +
                                     "/MITI_CHE")  # videos splitted in images
         self.transformations = self.__get_transformations()
         self.class_labels = [
@@ -36,13 +36,13 @@ class Cholec80FeatureExtract:
 
         # Weights obtained after Median Frequency Balancing
         weights = [
-            1.6411019141231247,
-            0.19090963801041133,
+            1.6242660518999563,
+            0.839382998657784,
             1.0,
-            0.2502662616859295,
-            1.9176363911137977,
-            0.9840248158200853,
-            2.174635818337618,
+            0.8745760497207751,
+            1.9001433840697624,
+            0.8167043332484509,
+            1.4358846408551202,
         ]
         self.class_weights = np.asarray(weights)
         # Column of class labels
@@ -51,7 +51,7 @@ class Cholec80FeatureExtract:
         self.df = {}
         # Load the pickled dataframe
         self.df["all"] = pd.read_pickle(
-            self.cholec_root_dir / "dataframe/MITI_split_250px_25fps.pkl")
+            self.miti_root_dir / "dataframe/MITI_split_250px_25fps.pkl")
 
         
         # get Video IDs from dataframe
@@ -161,7 +161,7 @@ class Cholec80FeatureExtract:
                     self.df[split],
                     self.transformations[split],
                     self.label_col,
-                    img_root=self.cholec_root_dir / "cholec_split_250px_25fps",
+                    img_root=self.miti_root_dir / "split_250px_250px",
                     image_path_col="image_path",
                 )
 
@@ -196,14 +196,14 @@ class Cholec80FeatureExtract:
         data_transformations["test"] = data_transformations["val"]
         return data_transformations
 
-    def median_frequency_weights(
-            self, file_list):  ## do only once and define weights in class
-        frequency = [0, 0, 0, 0, 0, 0, 0]
-        for i in file_list:
-            frequency[int(i[1])] += 1
-        median = np.median(frequency)
-        weights = [median / j for j in frequency]
-        return weights
+    # def median_frequency_weights(
+    #         self, file_list):  ## do only once and define weights in class
+    #     frequency = [0, 0, 0, 0, 0, 0, 0]
+    #     for i in file_list:
+    #         frequency[int(i[1])] += 1
+    #     median = np.median(frequency)
+    #     weights = [median / j for j in frequency]
+    #     return weights
 
     @staticmethod
     def add_dataset_specific_args(parser):  # pragma: no cover
@@ -230,19 +230,24 @@ class Cholec80FeatureExtract:
 class Dataset_from_Dataframe_video_based(Dataset):
     """simple datagenerator from pandas dataframe"""
 
-    # "image_path"", "class", "time", "video", "tool_Grasper", "tool_Bipolar", "tool_Hook", "tool_Scissors", "tool_Clipper", "tool_Irrigator", "tool_SpecimenBag"
-    # "video_id", "image_path"
+    # "video_id", "image_path", "time", "class"
     def __init__(self,
                  df,
                  transform,
                  label_col,
                  img_root="",
                  image_path_col="path"):
+        # dataframe
         self.df = df
+        # transforms
         self.transform = transform
+        # "class"
         self.label_col = label_col
+        # "image_path"
         self.image_path_col = image_path_col
+        # root of split frames
         self.img_root = img_root
+        # lowest video_idx 
         self.starting_idx = self.df["video_idx"].min()
         print(self.starting_idx)
 
@@ -250,30 +255,30 @@ class Dataset_from_Dataframe_video_based(Dataset):
         return len(self.df.video_idx.unique())
 
     def __getitem__(self, index):
+        # starting index
         sindex = self.starting_idx + index
+        # select all frames for a given video
         img_list = self.df.loc[self.df["video_idx"] == sindex]
+        # token for frames of a given video
         videos_x = torch.zeros([len(img_list), 3, 224, 224], dtype=torch.float)
+        # token for frame labels of a given video
         label = torch.tensor(img_list[self.label_col].tolist(),
                              dtype=torch.int)
         f_video = self.load_cholec_video(img_list)
+        # performing the transform
         if self.transform:
             for i in range(len(f_video)):
                 videos_x[i] = self.transform(image=f_video[i],
                                              mask=None)["image"]
-        add_label_cols = [
-            "tool_Grasper", "tool_Bipolar", "tool_Hook", "tool_Scissors",
-            "tool_Clipper", "tool_Irrigator", "tool_SpecimenBag"
-        ]
-        add_label = []
-        for add_l in add_label_cols:
-            add_label.append(img_list[add_l].tolist())
+
         #print(f"Index of video: {index} - sindex: {sindex} - len_label: {label.shape[0]} - len_vid: {videos_x.shape[0]}")
         assert videos_x.shape[0] == label.shape[0], f"weird shapes at {sindex}"
         assert videos_x.shape[
             0] > 0, f"no video returned shape: {videos_x.shape[0]}"
-        return videos_x, label, add_label
+        return videos_x, label
 
     def load_cholec_video(self, img_list):
+        # load frames from specified video as numpy arrays
         f_video = []
         allImage = img_list[self.image_path_col].tolist()
         for i in range(img_list.shape[0]):

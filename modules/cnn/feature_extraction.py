@@ -76,10 +76,10 @@ class FeatureExtraction(LightningModule):
         :type x: `torch tensor`
         :return stem, phase, tool: three tensors - `stem` (extracted features of the frame), `label` (logits representing predicted phase of the frame) and `tool` (vector representing predicted tools in the frame) 
         """
-        stem, phase, tool = self.model.forward(x)
-        return stem, phase, tool
+        stem, phase = self.model.forward(x)
+        return stem, phase
 
-    def loss_phase_tool(self, p_phase, p_tool, labels_phase, labels_tool, num_tasks):
+    def loss_phase_tool(self, p_phase, labels_phase):
         """Computes loss for phase recognition alone or both - phase and tool recognition. 
 
         :param p_phase: predicted phase of a given frame
@@ -96,18 +96,8 @@ class FeatureExtraction(LightningModule):
         """
         # Multi-class loss of phase recognition
         loss_phase = self.ce_loss(p_phase, labels_phase)
-        if num_tasks == 1:
-            return loss_phase
-        # else
-        labels_tool = torch.stack(labels_tool, dim=1)
-        loss_tools = self.bce_loss(p_tool, labels_tool.data.float())
-        # automatic balancing
-        precision1 = torch.exp(-self.log_vars[0])
-        loss_phase_l = precision1 * loss_phase + self.log_vars[0]
-        precision2 = torch.exp(-self.log_vars[1])
-        loss_tool_l = precision2 * loss_tools + self.log_vars[1]
-        loss = loss_phase_l + loss_tool_l
-        return loss
+        
+        return loss_phase
 
 
 
@@ -116,9 +106,9 @@ class FeatureExtraction(LightningModule):
 
         :return loss: computed loss using the cross-entropy loss for multi-class phase  classification problem and binary bross-entropy loss for multi-label tool problem
         """
-        x, y_phase, y_tool = batch
-        _, p_phase, p_tool = self.forward(x)
-        loss = self.loss_phase_tool(p_phase, p_tool, y_phase, y_tool, self.num_tasks)
+        x, y_phase = batch
+        _, p_phase = self.forward(x)
+        loss = self.loss_phase_tool(p_phase, y_phase)
         # acc_phase, acc_tool, loss
         if self.num_tasks == 2:
             self.train_acc_tool(p_tool, torch.stack(y_tool, dim=1))
@@ -137,9 +127,9 @@ class FeatureExtraction(LightningModule):
 
         :return loss: computed loss using the cross-entropy loss for multi-class phase  classification problem and binary bross-entropy loss for multi-label tool problem
         """
-        x, y_phase, y_tool = batch
-        _, p_phase, p_tool = self.forward(x)
-        loss = self.loss_phase_tool(p_phase, p_tool, y_phase, y_tool, self.num_tasks)
+        x, y_phase = batch
+        _, p_phase = self.forward(x)
+        loss = self.loss_phase_tool(p_phase, y_phase)
         # acc_phase, acc_tool, loss
         if self.num_tasks == 2:
             self.val_acc_tool(p_tool, torch.stack(y_tool, dim=1))
