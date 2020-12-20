@@ -22,17 +22,19 @@ class Cholec80FeatureExtract:
         self.fps_sampling = hparams.fps_sampling
         self.fps_sampling_test = hparams.fps_sampling_test
         self.cholec_root_dir = Path(self.hparams.data_root +
-                                    "/cholec80")  # videos splitted in images
+                                    "/MITI_CHE")  # videos splitted in images
         self.transformations = self.__get_transformations()
         self.class_labels = [
+            "PrePreparation",
             "Preparation",
-            "CalotTriangleDissection",
-            "ClippingCutting",
-            "GallbladderDissection",
-            "GallbladderPackaging",
-            "CleaningCoagulation",
-            "GallbladderRetraction",
+            "Clipping",
+            "Dissection",
+            "Haemostasis1",
+            "Retrieval",
+            "Haemostasis2",
         ]
+
+        # Weights obtained after Median Frequency Balancing
         weights = [
             1.6411019141231247,
             0.19090963801041133,
@@ -43,33 +45,43 @@ class Cholec80FeatureExtract:
             2.174635818337618,
         ]
         self.class_weights = np.asarray(weights)
+        # Column of class labels
         self.label_col = "class"
+        # Dataframe
         self.df = {}
+        # Load the pickled dataframe
         self.df["all"] = pd.read_pickle(
-            self.cholec_root_dir / "dataframes/cholec_split_250px_25fps.pkl")
+            self.cholec_root_dir / "dataframe/MITI_split_250px_25fps.pkl")
 
-        #print("Drop nan rows from df manually")
-        ## Manually remove these indices as they are nan in the DF which causes issues
-        index_nan = [1983913, 900090]
-        #self.df["all"][self.df["all"].isna().any(axis=1)]
-        self.df["all"] = self.df["all"].drop(index_nan)
-        assert self.df["all"].isnull().sum().sum(
-        ) == 0, "Dataframe contains nan Elements"
-        self.df["all"] = self.df["all"].reset_index()
+        
+        # get Video IDs from dataframe
+        video_ids = df["all"].video_idx.unique()
+        print(f'original video_ids: {video_ids}')
+        # shuffling the video indices for cross-validation
+        np.random.shuffle(video_ids)
+        print(f'shuffled video_ids: {video_ids}')
+        # Cross-validation; circular connectivity by specifying start index for training
+        # Block of constant size of 65 videos - 20 videos
 
-        self.vids_for_training = [i for i in range(1, 41)]
-        self.vids_for_val = [i for i in range(41, 49)]
-        self.vids_for_test = [i for i in range(49, 81)]
 
+        # Define Train-Validation-Test video split
+        # please check actual video ranges from video names 
+        self.vids_for_training = video_ids[:65]
+        self.vids_for_val = video_ids[65:]
+        # self.vids_for_test = [i for i in range(49, 81)]
+
+        # Extract Train videos frames
         self.df["train"] = self.df["all"][self.df["all"]["video_idx"].isin(
             self.vids_for_training)]
+        # Extract Validation videos frames
         self.df["val"] = self.df["all"][self.df["all"]["video_idx"].isin(
             self.vids_for_val)]
+        # Extract Test videos frames
         if hparams.test_extract:
             print(
                 f"test extract enabled. Test will be used to extract the videos (testset = all)"
             )
-            self.vids_for_test = [i for i in range(1, 81)]
+            self.vids_for_test = video_ids
             self.df["test"] = self.df["all"]
         else:
             self.df["test"] = self.df["all"][self.df["all"]["video_idx"].isin(
@@ -80,57 +92,68 @@ class Cholec80FeatureExtract:
             "val": len(self.df["val"]),
             "test": len(self.df["test"])
         }
+
+        # Sub-sample train and validation set videos
         if self.fps_sampling < 25 and self.fps_sampling > 0:
+            # sub-sampling factor
             factor = int(25 / self.fps_sampling)
             print(
                 f"Subsampling(factor: {factor}) data: 25fps > {self.fps_sampling}fps"
             )
+            # selecting sub-sampled frames from dataframe
             self.df["train"] = self.df["train"].iloc[::factor]
             self.df["val"] = self.df["val"].iloc[::factor]
             self.df["all"] = self.df["all"].iloc[::factor]
+            # printing to console and verify sub-sampling
             for split in ["train", "val"]:
                 print(
                     f"{split:>7}: {len_org[split]:8} > {len(self.df[split])}")
+        
+        # Sub-sample test set videos 
         if hparams.fps_sampling_test < 25 and self.fps_sampling_test > 0:
+            # sub-sampling factor
             factor = int(25 / self.fps_sampling_test)
             print(
                 f"Subsampling(factor: {factor}) data: 25fps > {self.fps_sampling}fps"
             )
+            # selecting sub-sampled frames from dataframe
             self.df["test"] = self.df["test"].iloc[::factor]
             split = "test"
+            # printing to console and verify sub-sampling
             print(f"{split:>7}: {len_org[split]:8} > {len(self.df[split])}")
 
         self.data = {}
-
-        if self.dataset_mode == "img_multilabel":
-            for split in ["train", "val"]:
-                self.df[split] = self.df[split].reset_index()
-                self.data[split] = Dataset_from_Dataframe(
-                    self.df[split],
-                    self.transformations[split],
-                    self.label_col,
-                    img_root=self.cholec_root_dir / "cholec_split_250px_25fps",
-                    image_path_col="image_path",
-                    add_label_cols=[
-                        "tool_Grasper", "tool_Bipolar", "tool_Hook",
-                        "tool_Scissors", "tool_Clipper", "tool_Irrigator",
-                        "tool_SpecimenBag"
-                    ])
-            # Here we want to extract all features
-            #self.df["test"] = self.df["all"].reset_index()
-            self.df["test"] = self.df["test"].reset_index()
-            self.data["test"] = Dataset_from_Dataframe(
-                self.df["test"],
-                self.transformations["test"],
-                self.label_col,
-                img_root=self.cholec_root_dir / "cholec_split_250px_25fps",
-                image_path_col="image_path",
-                add_label_cols=[
-                    "video_idx", "image_path", "index", "tool_Grasper",
-                    "tool_Bipolar", "tool_Hook", "tool_Scissors",
-                    "tool_Clipper", "tool_Irrigator", "tool_SpecimenBag"
-                ])
-
+        # # Check if there is tool information
+        # if self.dataset_mode == "img_multilabel":
+        #     for split in ["train", "val"]:
+        #         self.df[split] = self.df[split].reset_index()
+        #         self.data[split] = Dataset_from_Dataframe(
+        #             self.df[split],
+        #             self.transformations[split],
+        #             self.label_col,
+        #             img_root=self.cholec_root_dir / "cholec_split_250px_25fps",
+        #             image_path_col="image_path",
+        #             add_label_cols=[
+        #                 "tool_Grasper", "tool_Bipolar", "tool_Hook",
+        #                 "tool_Scissors", "tool_Clipper", "tool_Irrigator",
+        #                 "tool_SpecimenBag"
+        #             ])
+        #     # Here we want to extract all features
+        #     #self.df["test"] = self.df["all"].reset_index()
+        #     self.df["test"] = self.df["test"].reset_index()
+        #     self.data["test"] = Dataset_from_Dataframe(
+        #         self.df["test"],
+        #         self.transformations["test"],
+        #         self.label_col,
+        #         img_root=self.cholec_root_dir / "cholec_split_250px_25fps",
+        #         image_path_col="image_path",
+        #         add_label_cols=[
+        #             "video_idx", "image_path", "index", "tool_Grasper",
+        #             "tool_Bipolar", "tool_Hook", "tool_Scissors",
+        #             "tool_Clipper", "tool_Irrigator", "tool_SpecimenBag"
+        #         ])
+        
+        # Multi-class classification of video frames
         if self.dataset_mode == "vid_multilabel":
             for split in ["train", "val", "test"]:
                 self.df[split] = self.df[split].reset_index()
@@ -207,7 +230,8 @@ class Cholec80FeatureExtract:
 class Dataset_from_Dataframe_video_based(Dataset):
     """simple datagenerator from pandas dataframe"""
 
-    # image_path", "class", "time", "video", "tool_Grasper", "tool_Bipolar", "tool_Hook", "tool_Scissors", "tool_Clipper", "tool_Irrigator", "tool_SpecimenBag"
+    # "image_path"", "class", "time", "video", "tool_Grasper", "tool_Bipolar", "tool_Hook", "tool_Scissors", "tool_Clipper", "tool_Irrigator", "tool_SpecimenBag"
+    # "video_id", "image_path"
     def __init__(self,
                  df,
                  transform,

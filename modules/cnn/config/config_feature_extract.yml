@@ -9,7 +9,7 @@ batch_size : 1000
 fps_sampling : 1
 fps_sampling_test : 1
 learning_rate : 0.0005
-dataset_mode : img_multilabel
+dataset_mode : vid_multilabel
 early_stopping_metric : val_acc_phase
 pretrained : True
 save_top_k : 1
