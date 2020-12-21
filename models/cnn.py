@@ -16,9 +16,9 @@ class MITIResNet50Model(nn.Module):
             hparams (namespace): Dictionary containing several key-value pairs.
                                 The keys `pretrained` and `out_features` are used here.
         """
-        super(TwoHeadResNet50Model, self).__init__()
+        super(MITIResNet50Model, self).__init__()
         self.model = models.resnet50(pretrained=hparams.pretrained)
-        # Replace final layer of ResNet50 with Identity layer
+        # Modify final layer of ResNet50 
         self.model.fc = Identity()
         self.fc_phase = nn.Linear(2048, hparams.out_features)
 

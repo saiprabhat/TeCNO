@@ -55,7 +55,7 @@ class Cholec80FeatureExtract:
 
         
         # get Video IDs from dataframe
-        video_ids = df["all"].video_idx.unique()
+        video_ids = self.df["all"].video_idx.unique()
         print(f'original video_ids: {video_ids}')
         # shuffling the video indices for cross-validation
         np.random.shuffle(video_ids)
