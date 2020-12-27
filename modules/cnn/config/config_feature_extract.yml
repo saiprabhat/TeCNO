@@ -1,5 +1,5 @@
 module : cnn.feature_extraction.FeatureExtraction
-model : cnn.MITIResNet50Model
+model : cnn.OneHeadResNet50Model
 data_root : /mnt/polyaxon/data1
 dataset : cholec80_feature_extract.Cholec80FeatureExtract
 out_features : 7 # number of phases/tools

@@ -57,11 +57,7 @@ class Cholec80FeatureExtract:
         # get Video IDs from dataframe
         video_ids = self.df["all"].video_idx.unique()
         print(f'original video_ids: {video_ids}')
-        # shuffling the video indices for cross-validation
-        np.random.shuffle(video_ids)
         print(f'shuffled video_ids: {video_ids}')
-        # Cross-validation; circular connectivity by specifying start index for training
-        # Block of constant size of 65 videos - 20 videos
 
 
         # Define Train-Validation-Test video split
@@ -123,35 +119,35 @@ class Cholec80FeatureExtract:
             print(f"{split:>7}: {len_org[split]:8} > {len(self.df[split])}")
 
         self.data = {}
-        # # Check if there is tool information
-        # if self.dataset_mode == "img_multilabel":
-        #     for split in ["train", "val"]:
-        #         self.df[split] = self.df[split].reset_index()
-        #         self.data[split] = Dataset_from_Dataframe(
-        #             self.df[split],
-        #             self.transformations[split],
-        #             self.label_col,
-        #             img_root=self.cholec_root_dir / "cholec_split_250px_25fps",
-        #             image_path_col="image_path",
-        #             add_label_cols=[
-        #                 "tool_Grasper", "tool_Bipolar", "tool_Hook",
-        #                 "tool_Scissors", "tool_Clipper", "tool_Irrigator",
-        #                 "tool_SpecimenBag"
-        #             ])
-        #     # Here we want to extract all features
-        #     #self.df["test"] = self.df["all"].reset_index()
-        #     self.df["test"] = self.df["test"].reset_index()
-        #     self.data["test"] = Dataset_from_Dataframe(
-        #         self.df["test"],
-        #         self.transformations["test"],
-        #         self.label_col,
-        #         img_root=self.cholec_root_dir / "cholec_split_250px_25fps",
-        #         image_path_col="image_path",
-        #         add_label_cols=[
-        #             "video_idx", "image_path", "index", "tool_Grasper",
-        #             "tool_Bipolar", "tool_Hook", "tool_Scissors",
-        #             "tool_Clipper", "tool_Irrigator", "tool_SpecimenBag"
-        #         ])
+        # Check if there is tool information
+        if self.dataset_mode == "img_multilabel":
+            for split in ["train", "val"]:
+                self.df[split] = self.df[split].reset_index()
+                self.data[split] = Dataset_from_Dataframe(
+                    self.df[split],
+                    self.transformations[split],
+                    self.label_col,
+                    img_root=self.cholec_root_dir / "cholec_split_250px_25fps",
+                    image_path_col="image_path",
+                    add_label_cols=[
+                        "tool_Grasper", "tool_Bipolar", "tool_Hook",
+                        "tool_Scissors", "tool_Clipper", "tool_Irrigator",
+                        "tool_SpecimenBag"
+                    ])
+            # Here we want to extract all features
+            #self.df["test"] = self.df["all"].reset_index()
+            self.df["test"] = self.df["test"].reset_index()
+            self.data["test"] = Dataset_from_Dataframe(
+                self.df["test"],
+                self.transformations["test"],
+                self.label_col,
+                img_root=self.cholec_root_dir / "cholec_split_250px_25fps",
+                image_path_col="image_path",
+                add_label_cols=[
+                    "video_idx", "image_path", "index", "tool_Grasper",
+                    "tool_Bipolar", "tool_Hook", "tool_Scissors",
+                    "tool_Clipper", "tool_Irrigator", "tool_SpecimenBag"
+                ])
         
         # Multi-class classification of video frames
         if self.dataset_mode == "vid_multilabel":
@@ -247,46 +243,29 @@ class Dataset_from_Dataframe_video_based(Dataset):
         self.image_path_col = image_path_col
         # root of split frames
         self.img_root = img_root
-        # lowest video_idx 
-        self.starting_idx = self.df["video_idx"].min()
-        print(self.starting_idx)
+        # total number of frames in the split
+        self.number_frames = len(self.df[self.image_path_col])
+        # path to all frames in the split
+        self.allImages = self.df[self.image_path_col].tolist()
+        # labels of all frames in the split
+        self.allLabels = self.df[self.label_col].tolist()
 
     def __len__(self):
-        return len(self.df.video_idx.unique())
+        return self.number_frames
 
     def __getitem__(self, index):
-        # starting index
-        sindex = self.starting_idx + index
-        # select all frames for a given video
-        img_list = self.df.loc[self.df["video_idx"] == sindex]
-        # token for frames of a given video
-        videos_x = torch.zeros([len(img_list), 3, 224, 224], dtype=torch.float)
-        # token for frame labels of a given video
-        label = torch.tensor(img_list[self.label_col].tolist(),
-                             dtype=torch.int)
-        f_video = self.load_cholec_video(img_list)
+
+        p = self.img_root / self.allImages[index]
+        im = np.asarray(Image.open(p), dtype=np.uint8)
         # performing the transform
         if self.transform:
-            for i in range(len(f_video)):
-                videos_x[i] = self.transform(image=f_video[i],
-                                             mask=None)["image"]
+            final_im = self.transform(image=im)["image"]            
 
-        #print(f"Index of video: {index} - sindex: {sindex} - len_label: {label.shape[0]} - len_vid: {videos_x.shape[0]}")
-        assert videos_x.shape[0] == label.shape[0], f"weird shapes at {sindex}"
-        assert videos_x.shape[
-            0] > 0, f"no video returned shape: {videos_x.shape[0]}"
-        return videos_x, label
+        # label for this frame
+        label = torch.tensor(self.allLabels[index], dtype=torch.long)
 
-    def load_cholec_video(self, img_list):
-        # load frames from specified video as numpy arrays
-        f_video = []
-        allImage = img_list[self.image_path_col].tolist()
-        for i in range(img_list.shape[0]):
-            p = self.img_root / allImage[i]
-            im = Image.open(p)
-            f_video.append(np.asarray(im, dtype=np.uint8))
-        f_video = np.asarray(f_video)
-        return f_video
+        # RETURN DICTIONARY???
+        return final_im, label
 
 
 class Dataset_from_Dataframe(Dataset):

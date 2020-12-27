@@ -7,53 +7,6 @@ from datetime import datetime
 
 ### TWO HEAD MODELS ###
 
-
-class MITIResNet50Model(nn.Module):
-    def __init__(self, hparams):
-        """Constructor of the class. 
-
-        Args:
-            hparams (namespace): Dictionary containing several key-value pairs.
-                                The keys `pretrained` and `out_features` are used here.
-        """
-        super(MITIResNet50Model, self).__init__()
-        self.model = models.resnet50(pretrained=hparams.pretrained)
-        # Modify final layer of ResNet50 
-        self.model.fc = Identity()
-        self.fc_phase = nn.Linear(2048, hparams.out_features)
-
-    def forward(self, x):
-        """
-        Performs a forward pass through a TwoHeadResNet50 model and computes the predictions for each frame of a video.
-        :return out_stem: feature vectors for each frame
-        :return phase: predicted phase vector for each frame
-        :return tool: predicted tool vector for each frame
-        """
-        now = datetime.now()
-        out_stem = self.model(x)
-        phase = self.fc_phase(out_stem)
-        return out_stem, phase
-
-    @staticmethod
-    def add_model_specific_args(parser):  # pragma: no cover
-        resnet50model_specific_args = parser.add_argument_group(
-            title='resnet50model specific args options')
-        resnet50model_specific_args.add_argument("--pretrained",
-                                                 action="store_true",
-                                                 help="pretrained on imagenet")
-        resnet50model_specific_args.add_argument(
-            "--model_specific_batch_size_max", type=int, default=80)
-        return parser
-
-#### Identity Layer ####
-class Identity(nn.Module):
-    def __init__(self):
-        super(Identity, self).__init__()
-
-    def forward(self, x):
-        return x
-
-
 class TwoHeadResNet50Model(nn.Module):
     def __init__(self, hparams):
         """Constructor of the class. 
@@ -81,6 +34,53 @@ class TwoHeadResNet50Model(nn.Module):
         phase = self.fc_phase(out_stem)
         tool = self.fc_tool(out_stem)
         return out_stem, phase, tool
+
+    @staticmethod
+    def add_model_specific_args(parser):  # pragma: no cover
+        resnet50model_specific_args = parser.add_argument_group(
+            title='resnet50model specific args options')
+        resnet50model_specific_args.add_argument("--pretrained",
+                                                 action="store_true",
+                                                 help="pretrained on imagenet")
+        resnet50model_specific_args.add_argument(
+            "--model_specific_batch_size_max", type=int, default=80)
+        return parser
+
+
+#### Identity Layer ####
+class Identity(nn.Module):
+    def __init__(self):
+        super(Identity, self).__init__()
+
+    def forward(self, x):
+        return x
+
+
+class OneHeadResNet50Model(nn.Module):
+    def __init__(self, hparams):
+        """Constructor of the class. 
+
+        Args:
+            hparams (namespace): Dictionary containing several key-value pairs.
+                                The keys `pretrained` and `out_features` are used here.
+        """
+        super(OneHeadResNet50Model, self).__init__()
+        self.model = models.resnet50(pretrained=hparams.pretrained)
+        # Modify final layer of ResNet50 
+        self.model.fc = Identity()
+        self.fc_phase = nn.Linear(2048, hparams.out_features)
+
+    def forward(self, x):
+        """
+        Performs a forward pass through a TwoHeadResNet50 model and computes the predictions for each frame of a video.
+        :return out_stem: feature vectors for each frame
+        :return phase: predicted phase vector for each frame
+        :return tool: predicted tool vector for each frame
+        """
+        now = datetime.now()
+        out_stem = self.model(x)
+        phase = self.fc_phase(out_stem)
+        return out_stem, phase
 
     @staticmethod
     def add_model_specific_args(parser):  # pragma: no cover
