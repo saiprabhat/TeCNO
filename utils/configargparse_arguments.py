@@ -42,6 +42,7 @@ def build_configargparser(parser):
                                required=True,
                                type=str)
     dataset_group.add_argument("--dataset", type=str, required=True)
+    dataset_group.add_argument("--data_split", default=1, type=int)
     dataset_group.add_argument("--out_features", type=int, required=True)
     dataset_group.add_argument("--train_percent_check",
                                type=float,

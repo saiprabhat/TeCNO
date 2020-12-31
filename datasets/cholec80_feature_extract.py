@@ -55,16 +55,24 @@ class Cholec80FeatureExtract:
 
         
         # get Video IDs from dataframe
-        video_ids = self.df["all"].video_idx.unique()
-        print(f'original video_ids: {video_ids}')
-        print(f'shuffled video_ids: {video_ids}')
-
+        self.video_ids = self.df["all"].video_idx.unique()
+        print(f'original video_ids: {self.video_ids}')
 
         # Define Train-Validation-Test video split
-        # please check actual video ranges from video names 
-        self.vids_for_training = video_ids[:65]
-        self.vids_for_val = video_ids[65:]
-        # self.vids_for_test = [i for i in range(49, 81)]
+        # self.vids_for_training = self.video_ids[:65]
+        # self.vids_for_val = self.video_ids[65:]
+
+        self.vids_for_training, self.vids_for_val, self.vids_for_test = \
+                                        self.get_5fold_split(self.hparams.data_split, self.video_ids)
+                                        
+        print(f'#training video_ids: {len(self.vids_for_training)}\n{self.vids_for_training}\n')
+        print(f'#validation video_ids: {len(self.vids_for_val)}\n{self.vids_for_val}\n')
+
+        assert len(self.vids_for_training) == 52
+        assert len(self.vids_for_val) == 13
+        assert set(self.vids_for_training).issubset(set(self.video_ids)) == True
+        assert set(self.vids_for_val).issubset(set(self.video_ids)) == True
+
 
         # Extract Train videos frames
         self.df["train"] = self.df["all"][self.df["all"]["video_idx"].isin(
@@ -201,6 +209,50 @@ class Cholec80FeatureExtract:
     #     weights = [median / j for j in frequency]
     #     return weights
 
+    def get_5fold_split(self, split, video_ids):
+        # LAST 20 VIDEOS FOR TEST
+        vids_for_test = np.take(video_ids, np.arange(65, 85))
+        # train = 52 videos and val = 13 videos
+        if split == 1:
+            inds_for_train = np.arange(0, 52)
+            inds_for_val = np.arange(52, 65)
+            vids_for_train = np.take(video_ids, inds_for_train)
+            vids_for_val = np.take(video_ids, inds_for_val)
+
+        elif split == 2:
+            inds_for_train = np.arange(13, 65)
+            inds_for_val = np.arange(0, 13)
+            vids_for_train = np.take(video_ids, inds_for_train)
+            vids_for_val = np.take(video_ids, inds_for_val)
+
+        elif split == 3:
+            inds_for_train = np.arange(26, (26 + 52))
+            inds_for_train[inds_for_train > 64] = inds_for_train[inds_for_train > 64] - 65
+            inds_for_val = np.arange((26 + 52), (26 + 52 + 13))
+            inds_for_val[inds_for_val > 64] = inds_for_val[inds_for_val > 64] - 65
+            vids_for_train = np.take(video_ids, inds_for_train)
+            vids_for_val = np.take(video_ids, inds_for_val)
+
+        elif split == 4:
+            inds_for_train = np.arange(39, (39 + 52))
+            inds_for_train[inds_for_train > 64] = inds_for_train[inds_for_train > 64] - 65
+            inds_for_val = np.arange((39 + 52), (39 + 52 + 13))
+            inds_for_val[inds_for_val > 64] = inds_for_val[inds_for_val > 64] - 65
+            vids_for_train = np.take(video_ids, inds_for_train)
+            vids_for_val = np.take(video_ids, inds_for_val)
+
+        elif split == 5:
+            nds_for_train = np.arange(52, (52 + 52))
+            inds_for_train[inds_for_train > 64] = inds_for_train[inds_for_train > 64] - 65
+            inds_for_val = np.arange((52 + 52), (52 + 52 + 13))
+            inds_for_val[inds_for_val > 64] = inds_for_val[inds_for_val > 64] - 65
+            vids_for_train = np.take(video_ids, inds_for_train)
+            vids_for_val = np.take(video_ids, inds_for_val)
+        else:
+            raise NotImplementedError
+
+        return vids_for_train, vids_for_val, vids_for_test
+
     @staticmethod
     def add_dataset_specific_args(parser):  # pragma: no cover
         cholec80_specific_args = parser.add_argument_group(
@@ -264,7 +316,6 @@ class Dataset_from_Dataframe_video_based(Dataset):
         # label for this frame
         label = torch.tensor(self.allLabels[index], dtype=torch.long)
 
-        # RETURN DICTIONARY???
         return final_im, label
 
 

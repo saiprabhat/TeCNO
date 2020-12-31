@@ -185,14 +185,17 @@ class FeatureExtraction(LightningModule):
             ], f)
 
     def test_step(self, batch, batch_idx):
-        """Performs `test` step and saves the features, predicted phase labels and ground truth labels for each frame of a video. This method must be called explicitly after completion of model training.
+        """Performs `test` step and saves the features, predicted phase labels 
+        and ground truth labels for each frame of a video. This method must be 
+        called explicitly after completion of model training.
         """
         x, y_phase, (vid_idx, img_name, img_index, tool_Grasper, tool_Bipolar,
                tool_Hook, tool_Scissors, tool_Clipper, tool_Irrigator,
                tool_SpecimenBag) = batch
+        # x, y_phase = batch
         vid_idx_raw = vid_idx.cpu().numpy()
         with torch.no_grad():
-            stem, y_hat, _ = self.forward(x)
+            stem, y_hat = self.forward(x)
         self.test_acc_phase(y_hat, y_phase)
         #self.log("test_acc_phase", self.test_acc_phase, on_epoch=True, on_step=True)
         vid_idxs, indexes = np.unique(vid_idx_raw, return_index=True)
