@@ -14,8 +14,8 @@ dataset_mode : vid_multilabel
 early_stopping_metric : val_acc_phase
 pretrained : True
 save_top_k : 1
-max_epochs : 15 # 30
-min_epochs : 6 # 20
+max_epochs : 30 # 30
+min_epochs : 12 # 20
 num_tasks : 1
 num_sanity_val_steps : 4
 test_extract : True

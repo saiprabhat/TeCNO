@@ -7,3 +7,5 @@ ConfigArgParse==1.2.3
 torchsummary==1.5.1
 pycm==3.0
 albumentations==0.5.0
+polyaxon-client
+wandb

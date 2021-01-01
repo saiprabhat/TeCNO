@@ -65,8 +65,8 @@ class Cholec80FeatureExtract:
         self.vids_for_training, self.vids_for_val, self.vids_for_test = \
                                         self.get_5fold_split(self.hparams.data_split, self.video_ids)
                                         
-        print(f'#training video_ids: {len(self.vids_for_training)}\n{self.vids_for_training}\n')
-        print(f'#validation video_ids: {len(self.vids_for_val)}\n{self.vids_for_val}\n')
+        # print(f'#training video_ids: {len(self.vids_for_training)}\n{self.vids_for_training}\n')
+        # print(f'#validation video_ids: {len(self.vids_for_val)}\n{self.vids_for_val}\n')
 
         assert len(self.vids_for_training) == 52
         assert len(self.vids_for_val) == 13
@@ -85,7 +85,7 @@ class Cholec80FeatureExtract:
             print(
                 f"test extract enabled. Test will be used to extract the videos (testset = all)"
             )
-            self.vids_for_test = video_ids
+            self.vids_for_test = self.video_ids
             self.df["test"] = self.df["all"]
         else:
             self.df["test"] = self.df["all"][self.df["all"]["video_idx"].isin(
@@ -242,7 +242,7 @@ class Cholec80FeatureExtract:
             vids_for_val = np.take(video_ids, inds_for_val)
 
         elif split == 5:
-            nds_for_train = np.arange(52, (52 + 52))
+            inds_for_train = np.arange(52, (52 + 52))
             inds_for_train[inds_for_train > 64] = inds_for_train[inds_for_train > 64] - 65
             inds_for_val = np.arange((52 + 52), (52 + 52 + 13))
             inds_for_val[inds_for_val > 64] = inds_for_val[inds_for_val > 64] - 65
@@ -301,6 +301,8 @@ class Dataset_from_Dataframe_video_based(Dataset):
         self.allImages = self.df[self.image_path_col].tolist()
         # labels of all frames in the split
         self.allLabels = self.df[self.label_col].tolist()
+        # vid_ids of all frames in the split
+        self.vid_ids = self.df["video_idx"].tolist()
 
     def __len__(self):
         return self.number_frames
@@ -309,14 +311,16 @@ class Dataset_from_Dataframe_video_based(Dataset):
 
         p = self.img_root / self.allImages[index]
         im = np.asarray(Image.open(p), dtype=np.uint8)
-        # performing the transform
+        # perform the transform
         if self.transform:
             final_im = self.transform(image=im)["image"]            
 
-        # label for this frame
+        # label of this frame
         label = torch.tensor(self.allLabels[index], dtype=torch.long)
+        # vid_id of this frame
+        frame_video_id = self.vid_ids[index]
 
-        return final_im, label
+        return final_im, label, frame_video_id
 
 
 class Dataset_from_Dataframe(Dataset):

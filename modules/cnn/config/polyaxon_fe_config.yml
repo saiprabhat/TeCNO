@@ -1,0 +1,45 @@
+version: 1
+kind: group
+build:
+  image: 'pytorch/pytorch:1.7.0-cuda11.0-cudnn8-runtime'
+  build_steps:
+    - apt update
+    - apt install -y libglib2.0-0 libsm6 libxext6 libxrender-dev git
+    - pip install -r requirements.txt
+    - wandb login 07dcd6e77e5a896338a38d871656d31c36fa009a
+
+  env_vars:
+    - ['TORCH_HOME', "/data/PytorchModelZoo"]
+
+
+hptuning:
+  concurrency: 1
+  matrix:
+    data_split:
+      values:
+        - 1
+        - 2
+        - 3
+        - 4
+        - 5
+
+
+environment:
+  resources:
+    cpu:
+      requests: 4
+      limits: 4
+    memory:
+      requests: 62192
+    gpu:
+      requests: 1
+      limits: 1
+params:
+  data_root: /data
+
+run:
+  cmd:
+    - python -u train.py -c modules/cnn/config/config_feature_extract.yml \
+                --data_split={{ data_split }} \
+                --data_root={{ data_root }} \
+                --on_polyaxon

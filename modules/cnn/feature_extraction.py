@@ -106,7 +106,7 @@ class FeatureExtraction(LightningModule):
 
         :return loss: computed loss using the cross-entropy loss for multi-class phase  classification problem and binary bross-entropy loss for multi-label tool problem
         """
-        x, y_phase = batch
+        x, y_phase, _ = batch
         _, p_phase = self.forward(x)
         loss = self.loss_phase_tool(p_phase, y_phase)
         # acc_phase, acc_tool, loss
@@ -127,7 +127,7 @@ class FeatureExtraction(LightningModule):
 
         :return loss: computed loss using the cross-entropy loss for multi-class phase  classification problem and binary bross-entropy loss for multi-label tool problem
         """
-        x, y_phase = batch
+        x, y_phase, _ = batch
         _, p_phase = self.forward(x)
         loss = self.loss_phase_tool(p_phase, y_phase)
         # acc_phase, acc_tool, loss
@@ -189,10 +189,10 @@ class FeatureExtraction(LightningModule):
         and ground truth labels for each frame of a video. This method must be 
         called explicitly after completion of model training.
         """
-        x, y_phase, (vid_idx, img_name, img_index, tool_Grasper, tool_Bipolar,
-               tool_Hook, tool_Scissors, tool_Clipper, tool_Irrigator,
-               tool_SpecimenBag) = batch
-        # x, y_phase = batch
+        # x, y_phase, (vid_idx, img_name, img_index, tool_Grasper, tool_Bipolar,
+        #        tool_Hook, tool_Scissors, tool_Clipper, tool_Irrigator,
+        #        tool_SpecimenBag) = batch
+        x, y_phase, vid_idx = batch
         vid_idx_raw = vid_idx.cpu().numpy()
         with torch.no_grad():
             stem, y_hat = self.forward(x)
